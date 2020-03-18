@@ -39,6 +39,7 @@ To add your docs, see
 
 host = get('host', '127.0.0.1')
 port = int(get('port', 5000))
+public_path = get('public_path','')
 debug = bool(get('debug', None))
 readonly = get('readonly', False)
 disable_delete = get('disable_delete', False)
