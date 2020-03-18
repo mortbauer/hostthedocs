@@ -1,4 +1,4 @@
-FROM python:3-alpine
+FROM python:3
 RUN pip install pipenv
 
 ADD ./Pipfile ./Pipfile
@@ -9,9 +9,6 @@ RUN pipenv install --deploy --system
 ADD ./hostthedocs/ ./hostthedocs/
 ADD ./runserver.py ./runserver.py
 
-ENV HTD_HOST "0.0.0.0"
-ENV HTD_PORT 5000
-
 EXPOSE 5000
 
-CMD [ "python", "runserver.py" ]
+CMD [ "gunicorn","hostthedocs:app","-b","0.0.0.0:5000"]

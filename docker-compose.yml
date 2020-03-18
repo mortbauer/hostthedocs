@@ -1,0 +1,25 @@
+version: '3'
+
+services:
+  htd:
+    restart: unless-stopped
+    build: .
+    environment:
+      HTD_DOCFILES_DIR: "/data"
+    volumes:
+      - "/srv/docker/htd:/data"
+    labels:
+      traefik.enable: true
+      traefik.http.routers.htd.rule: PathPrefix(`/htd`)
+      traefik.http.routers.htd.tls: true
+      traefik.http.routers.htd.middlewares: htd
+      traefik.http.middlewares.htd.stripprefix.prefixes: /htd
+      traefik.http.services.htd.loadbalancer.server.port: 5000
+    networks:
+      - proxy
+
+networks:
+  proxy:
+    external:
+      name: proxy
+
