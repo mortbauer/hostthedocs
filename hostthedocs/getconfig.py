@@ -21,7 +21,6 @@ def get(attr, default):
         result = default
     return result
 
-
 docfiles_dir = get('docfiles_dir', 'hostthedocs/static/docfiles')
 #assert os.path.isdir(docfiles_dir), 'Must exist: %s' % docfiles_dir
 docfiles_link_root = get('docfiles_link_root', 'static/docfiles')
@@ -47,6 +46,7 @@ max_content_mb = float(get('max_content_mb', 8))
 
 renderables = dict((k, v) for (k, v) in globals().items() if isinstance(v, six.string_types))
 
+auth_token = get('auth_token',None)
 
 def serve_gevent(app):
     from gevent.wsgi import WSGIServer

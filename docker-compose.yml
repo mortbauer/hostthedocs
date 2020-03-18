@@ -7,6 +7,8 @@ services:
     environment:
       HTD_DOCFILES_DIR: "/data"
       HTD_PUBLIC_PATH: "htd/"
+    env_file:
+      - .env
     volumes:
       - "/srv/docker/htd:/data"
     labels:

@@ -12,6 +12,11 @@ app.config['MAX_CONTENT_LENGTH'] = getconfig.max_content_mb * 1024 * 1024
 
 @app.route('/hmfd', methods=['POST', 'DELETE'])
 def hmfd():
+    if getconfig.auth_token is not None:
+        token = request.headers.get('Authorization')
+        if getconfig.auth_token != token:
+            return abort(401)
+
     if getconfig.readonly:
         return abort(403)
 
