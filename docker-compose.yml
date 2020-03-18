@@ -6,14 +6,16 @@ services:
     build: .
     environment:
       HTD_DOCFILES_DIR: "/data"
-      HTD_PUBLIC_PATH: "htd/"
     volumes:
       - "/srv/docker/htd:/data"
     labels:
       traefik.enable: true
       traefik.http.routers.htd.rule: PathPrefix(`/htd`)
-      traefik.http.routers.htd.tls: true
+      traefik.http.routers.htd.tls: false
       traefik.http.routers.htd.middlewares: htd
+      traefik.http.routers.htd_secure.rule: PathPrefix(`/htd`)
+      traefik.http.routers.htd_secure.tls: true
+      traefik.http.routers.htd_secure.middlewares: htd
       traefik.http.middlewares.htd.stripprefix.prefixes: /htd
       traefik.http.services.htd.loadbalancer.server.port: 5000
     networks:
