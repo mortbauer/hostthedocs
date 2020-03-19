@@ -131,8 +131,10 @@ def valid_version(s):
 
 def delete_files(name, version, docfiles_dir, entire_project=False):
     remove = os.path.join(docfiles_dir, name)
-    if not entire_project:
+    if not entire_project and version is not None:
         remove = os.path.join(remove, version)
+    elif not entire_project:
+        raise Exception('Need to specify a version')
     if os.path.exists(remove):
         shutil.rmtree(remove)
 

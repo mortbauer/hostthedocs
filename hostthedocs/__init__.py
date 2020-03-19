@@ -5,7 +5,7 @@ from flask import abort, Flask, jsonify, redirect, render_template, request
 from . import getconfig, util
 from .filekeeper import delete_files, insert_link_to_latest, parse_docfiles, unpack_project
 
-app = Flask(__name__)
+app = Flask(__name__,static_folder='web/static')
 
 app.config['MAX_CONTENT_LENGTH'] = getconfig.max_content_mb * 1024 * 1024
 
@@ -47,18 +47,21 @@ def hmfd():
 
 @app.route('/')
 def home():
+    app.logger.warning('Got request for root')
     projects = parse_docfiles(getconfig.docfiles_dir, getconfig.docfiles_link_root)
-    insert_link_to_latest(projects, '%(project)s/latest')
+    insert_link_to_latest(projects, '{}%(project)s/latest'.format(getconfig.public_path))
     return render_template('index.html', projects=projects, **getconfig.renderables)
 
 
 @app.route('/<project>/latest/')
 def latest_root(project):
+    app.logger.warning('Got request for latest_root')
     return latest(project, '')
 
 
 @app.route('/<project>/latest/<path:path>')
 def latest(project, path):
+    app.logger.warning('Got request for latest')
     parsed_docfiles = parse_docfiles(getconfig.docfiles_dir, getconfig.docfiles_link_root)
     proj_for_name = dict((p['name'], p) for p in parsed_docfiles)
     if project not in proj_for_name:
@@ -68,4 +71,7 @@ def latest(project, path):
         latestlink = '%s/%s' % (os.path.dirname(latestindex), path)
     else:
         latestlink = latestindex
+    app.logger.warning('Using redirect %s',getconfig.public_path + latestlink)
+    # return redirect(getconfig.public_path + latestlink)
+    # return redirect('http://wiflsr0009/htd/' + latestlink)
     return redirect('/' + latestlink)

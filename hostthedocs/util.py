@@ -10,25 +10,6 @@ import tarfile
 
 logger = logging.getLogger()
 
-def file_from_request(request):
-    """
-    Get the uploaded file from a POST request, which should contain exactly one file.
-
-    :param werkzeug.wrappers.BaseRequest request: The POST request.
-    :return: The instantiated UploadedFile.
-    :raises ValueError: if no files exist within the request.
-    """
-    uploaded_files = list(request.files.values())
-    if len(uploaded_files) > 1:
-        logger.warning(
-            'Only one file can be uploaded for each request. '
-            'Only the first file will be used.'
-        )
-    elif len(uploaded_files) == 0:
-        raise ValueError('Request does not contain uploaded file')
-
-    return uploaded_files[0]
-
 class FileExpander(object):
     """
     Manager for exanding compressed project files.
@@ -45,7 +26,13 @@ class FileExpander(object):
     TAR_EXTENSIONS = ('.tar', '.tgz', '.tar.gz', '.tar.bz2')
 
     def __init__(self, uploaded_file):
-        self._file = uploaded_file
+        self.filename = uploaded_file.filename
+        # there is an issue with SpooledTemporaryFile and seekable attribute
+        # https://bugs.python.org/issue35112 which is apperantly used at least
+        # by zip, therefore call rollover which should result in a real file
+        # like object according to the docs
+        uploaded_file.file.rollover()
+        self.file = uploaded_file.file._file
         self._handle = None
 
     @classmethod
@@ -65,11 +52,11 @@ class FileExpander(object):
         raise ValueError('Unknown compression method for %s' % filename)
 
     def __enter__(self):
-        method = self.detect_compression_method(self._file.filename)
+        method = self.detect_compression_method(self.filename)
         if method == 'zip':
-            self._handle = zipfile.ZipFile(self._file)
+            self._handle = zipfile.ZipFile(self.file)
         elif method == 'tar':
-            self._handle = tarfile.open(fileobj=self._file, mode='r:*')
+            self._handle = tarfile.open(fileobj=self.file, mode='r:*')
         else:
             raise ValueError('Unsupported method %s' % method)
 

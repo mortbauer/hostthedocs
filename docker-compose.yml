@@ -10,7 +10,8 @@ services:
     env_file:
       - .env
     volumes:
-      - "/srv/docker/htd:/data"
+      - "/srv/hostthedocs:/data"
+      - ".:/app"
     labels:
       traefik.enable: true
       traefik.http.routers.htd.rule: PathPrefix(`/htd`)
