@@ -5,12 +5,11 @@ services:
     restart: unless-stopped
     build: .
     environment:
-      HTD_DOCFILES_DIR: "/data"
       HTD_PUBLIC_PATH: "htd/"
     env_file:
       - .env
     volumes:
-      - "/srv/hostthedocs:/data"
+      - "/srv/hostthedocs:/app/hostthedocs/static/docfiles"
       - ".:/app"
     labels:
       traefik.enable: true
