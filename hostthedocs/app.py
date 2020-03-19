@@ -83,7 +83,7 @@ def latest(request):
         latestlink = '%s/%s' % (os.path.dirname(latestindex), path)
     else:
         latestlink = latestindex
-    fulllink = '/' + getconfig.public_path + latestlink
+    fulllink = '/' + latestlink
     return RedirectResponse(url=quote(fulllink))
 
 
