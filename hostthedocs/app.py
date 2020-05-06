@@ -35,6 +35,7 @@ def update_projects():
         getconfig.docfiles_link_root,
         getconfig.public_path,
     )
+    logger.debug('public path is %s',getconfig.public_path)
     templ = '{}%(project)s/latest'.format(getconfig.public_path)
     insert_link_to_latest(app.projects, templ)
 

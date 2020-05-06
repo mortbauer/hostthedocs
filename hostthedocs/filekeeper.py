@@ -84,7 +84,6 @@ def parse_docfiles(docfiles_dir, link_root, public_path):
         if not os.path.isdir(os.path.join(docfiles_dir, folder)):
             continue
         project = _get_proj_dict(docfiles_dir, folder, link_root)
-        print(project)
         if project is not None:
             projects.append(project)
 

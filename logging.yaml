@@ -1,0 +1,30 @@
+version: 1
+disable_existing_loggers: true
+formatters:
+  simple:
+    class: logging.Formatter
+    datefmt: '%Y-%m-%dT%H:%M:%S'
+    format: '%(asctime)s.%(msecs)03d - %(levelname)s - %(message)s'
+handlers:
+  console:
+    class: logging.StreamHandler
+    formatter: simple
+    stream: ext://sys.stdout
+  mail:
+    class: logging.handlers.SMTPHandler
+    formatter: simple
+    mailhost: [smtp.schindler.com,25]
+    fromaddr: hostthedocs 
+    toaddrs: 
+      - martin.ortbauer@schindler.com
+    subject: hostthedocs.bugs
+    level: ERROR
+loggers:
+  uvicorn:
+    propagate: true
+  hostthedocs:
+    propagate: true
+root:
+  level: DEBUG
+  handlers:
+  - console
