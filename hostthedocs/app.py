@@ -33,7 +33,6 @@ def update_projects():
     app.projects = parse_docfiles(
         getconfig.docfiles_dir,
         getconfig.docfiles_link_root,
-        getconfig.public_path,
     )
     logger.debug('public path is %s',getconfig.public_path)
     templ = '{}%(project)s/latest'.format(getconfig.public_path)
@@ -100,16 +99,20 @@ def home(request:Request):
     return templates.TemplateResponse('index.html', params)
 
 @app.get('/{project}/latest')
-@app.get('/{project}/latest/{path}')
-def latest(project:str,path:str = None):
-    proj_for_name = dict((p['name'], p) for p in app.projects)
+@app.get('/{project}/latest/')
+@app.get('/{project}/latest/.*')
+def latest(request:Request,project:str):
+    path = request.url.path.lstrip(f'/{project}/latest/')
+    proj_for_name = {p['name']: p for p in app.projects}
     if project not in proj_for_name:
-        msg = 'Project %s not found' % project
-        return PlainTextResponse(msg,status_code=404)
+        raise HTTPException(
+            detail=f'Project {project} not found',
+            status_code=status.HTTP_404_NOT_FOUND
+        )
     latestindex = proj_for_name[project]['versions'][-2]['link']
-    if path is not None:
-        latestlink = '%s/%s' % (os.path.dirname(latestindex), path)
+    if path:
+        latestlink = '/'.join((os.path.dirname(latestindex), path))
     else:
         latestlink = latestindex
-    fulllink = '/' + latestlink
+    fulllink = f'{getconfig.public_path}' + latestlink
     return RedirectResponse(url=quote(fulllink))

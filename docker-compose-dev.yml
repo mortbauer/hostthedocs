@@ -1,0 +1,39 @@
+version: '3'
+
+services:
+  htd_dev:
+    restart: unless-stopped
+    build: .
+    environment:
+      HTD_PUBLIC_PATH: "/htd_dev/"
+      HTD_DOCFILES_LINK_ROOT: "static/docfiles"
+    env_file:
+      - .env
+    volumes:
+      - "/srv/hostthedocs_dev:/app/hostthedocs/static/docfiles"
+      - ".:/app"
+    command: python runserver.py
+    labels:
+      traefik.enable: true
+      traefik.http.routers.htd_dev.rule: PathPrefix(`/htd_dev`)
+      traefik.http.routers.htd_dev.tls: false
+      traefik.http.routers.htd_dev.middlewares: htd_dev
+      traefik.http.routers.htd_dev_secure.rule: PathPrefix(`/htd_dev`)
+      traefik.http.routers.htd_dev_secure.tls: true
+      traefik.http.routers.htd_dev_secure.middlewares: strip-prefix
+      traefik.http.services.htd_dev.loadbalancer.server.port: 5000
+      # strip-any prefix and ensure trailing slash for proper relative links
+      # https://community.containo.us/t/middleware-to-add-the-if-needed/1895/13 
+      traefik.http.middlewares.strip-prefix.chain.middlewares: strip-prefix-1,strip-prefix-2
+      traefik.http.middlewares.strip-prefix-1.redirectregex.regex: ^(https?://[^/]+/[a-z0-9_]+)$$
+      traefik.http.middlewares.strip-prefix-1.redirectregex.replacement: $${1}/
+      traefik.http.middlewares.strip-prefix-1.redirectregex.permanent: true
+      traefik.http.middlewares.strip-prefix-2.stripprefixregex.regex: /[a-z0-9_]+
+    networks:
+      - proxy
+
+networks:
+  proxy:
+    external:
+      name: proxy
+

@@ -24,6 +24,7 @@ loggers:
     propagate: true
   hostthedocs:
     propagate: true
+    level: DEBUG
 root:
   level: DEBUG
   handlers:

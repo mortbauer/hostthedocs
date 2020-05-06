@@ -69,13 +69,14 @@ def _get_proj_dict(docfiles_dir, proj_dir, link_root):
     return {'name': proj_dir, 'versions': versions, 'description': descr}
 
 
-def parse_docfiles(docfiles_dir, link_root, public_path):
+def parse_docfiles(docfiles_dir, link_root):
     """
     Create the list of the projects.
 
     The list of projects is computed by walking the `docfiles_dir` and
     searching for project paths (<project-name>/<version>/index.html)
     """
+    logger.debug('parse_docfiles %s, %s',docfiles_dir,link_root)
     if not os.path.exists(docfiles_dir):
         return {}
 

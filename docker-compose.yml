@@ -5,8 +5,8 @@ services:
     restart: unless-stopped
     build: .
     environment:
-      #  HTD_PUBLIC_PATH: "htd/"
-      HTD_DOCFILES_LINK_ROOT: "htd/static/docfiles"
+      HTD_PUBLIC_PATH: "/htd/"
+      HTD_DOCFILES_LINK_ROOT: "static/docfiles"
     env_file:
       - .env
     volumes:

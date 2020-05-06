@@ -1,4 +1,6 @@
 natsort
+watchgod
+ruamel.yaml
 fastapi
 conf
 six
