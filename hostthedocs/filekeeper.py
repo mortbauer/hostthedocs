@@ -3,9 +3,12 @@ import shutil
 import zipfile
 import tarfile
 import natsort
+import logging
 
 from codecs import open
 from . import util
+
+logger = logging.getLogger(__name__)
 
 
 DEFAULT_PROJECT_DESCRIPTION = 'No project description'
@@ -66,7 +69,7 @@ def _get_proj_dict(docfiles_dir, proj_dir, link_root):
     return {'name': proj_dir, 'versions': versions, 'description': descr}
 
 
-def parse_docfiles(docfiles_dir, link_root):
+def parse_docfiles(docfiles_dir, link_root, public_path):
     """
     Create the list of the projects.
 
@@ -81,6 +84,7 @@ def parse_docfiles(docfiles_dir, link_root):
         if not os.path.isdir(os.path.join(docfiles_dir, folder)):
             continue
         project = _get_proj_dict(docfiles_dir, folder, link_root)
+        print(project)
         if project is not None:
             projects.append(project)
 
@@ -88,21 +92,23 @@ def parse_docfiles(docfiles_dir, link_root):
 
 
 def unpack_project(uploaded_file, proj_metadata, docfiles_dir):
-    projdir = os.path.join(docfiles_dir, proj_metadata['name'])
-    verdir = os.path.join(projdir, proj_metadata['version'])
+    projdir = os.path.join(docfiles_dir, cleanup_path(proj_metadata.name))
+    verdir = os.path.join(projdir, proj_metadata.version)
 
     if not os.path.isdir(verdir):
         os.makedirs(verdir)
 
     # Overwrite project description only if a (non empty) new one has been
     # provided
-    descr = proj_metadata.get('description', '')
+    descr = proj_metadata.description
     if len(descr) > 0:
         descrpath = os.path.join(projdir, 'description.txt')
         with open(descrpath, 'w', encoding='utf-8') as f:
             f.write(descr)
 
-    # This is insecure, we are only accepting things from trusted sources.
+     
+    # This is pontially insecure, we are only accepting things from trusted sources.
+    logger.info('extracting project to %s',verdir)
     with util.FileExpander(uploaded_file) as compressed_file:
         compressed_file.extractall(verdir)
 
@@ -129,7 +135,13 @@ def valid_version(s):
     return True
 
 
+def cleanup_path(path):
+    """ do not allow insecure path operations """
+    invalid_path_parts = ('', os.path.curdir, os.path.pardir)
+    return os.path.sep.join(x for x in path.split(os.path.sep) if x not in invalid_path_parts)
+
 def delete_files(name, version, docfiles_dir, entire_project=False):
+    name = cleanup_path(name)
     remove = os.path.join(docfiles_dir, name)
     if not entire_project and version is not None:
         remove = os.path.join(remove, version)

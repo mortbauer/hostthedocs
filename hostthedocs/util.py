@@ -20,6 +20,15 @@ class FileExpander(object):
     Currently the supported methods are:
     - zip
     - tar
+
+    # This is potentially insecure, we are only accepting things from trusted sources.
+    #
+    # overwriting files with arbitary crafted archive seems to be prevented in
+    # zipfile module but not in tarfile 
+    # https://ajinabraham.com/blog/exploiting-insecure-file-extraction-in-python-for-code-execution
+    # https://docs.python.org/2/library/zipfile.html#zipfile.ZipFile.extract
+    # 
+    # still possible to have a zip bomb: https://bugs.python.org/issue39341
     """
 
     ZIP_EXTENSIONS = ('.zip', )
@@ -56,7 +65,8 @@ class FileExpander(object):
         if method == 'zip':
             self._handle = zipfile.ZipFile(self.file)
         elif method == 'tar':
-            self._handle = tarfile.open(fileobj=self.file, mode='r:*')
+            raise ValueError('Unsupported method %s' % method)
+            # self._handle = tarfile.open(fileobj=self.file, mode='r:*')
         else:
             raise ValueError('Unsupported method %s' % method)
 

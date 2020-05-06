@@ -109,7 +109,7 @@ You can even do the entire zipping and uploading via the command line::
     cd /path/to/html
     zip -r archive.zip *
     curl -X POST \
-      -F filedata=@archive.zip \
+      -F archive=@archive.zip \
       -F name="My Project" \
       -F version="0.1.0" \
       -F description="This is my project." \
@@ -152,6 +152,11 @@ On the other hand, it isn't exposed through any UI,
 so it's not like some random person is going to stumble across it
 or accidentally press a button.
 And you can always regenerate the docs easily if something happened.
+
+TODOs
+=====
+* make operations safe, delete could potentially delete everything
+* clean up all this module shit into a class
 
 FAQ
 ===

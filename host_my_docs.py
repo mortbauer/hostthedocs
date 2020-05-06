@@ -15,7 +15,6 @@ import zipfile
 import six
 import requests
 
-from tests.test_filekeeper import ZIPFILE
 from hostthedocs import getconfig as cfg
 
 L = logging.getLogger('host_my_docs')
@@ -25,14 +24,11 @@ def parse():
     p.add_argument('-n', '--name', default='Test Project')
     p.add_argument('-d', '--description', default='Project description.')
     p.add_argument('-v', '--version', default='7.8.9')
-    p.add_argument('-z', '--zippath', default=ZIPFILE)
+    p.add_argument('-z', '--zippath', default='tests/project.zip')
     p.add_argument(
         '--hostthedocs', action='store_true',
         help='Generates docs for Host the Docs. Ignore all other options if used.')
-    p.add_argument(
-        '-H', '--host',
-        default='%s:%s' % (cfg.host, cfg.port),
-        help='Host to use.')
+    p.add_argument('-H', '--host',default=f'{cfg.host}:{cfg.port}')
     p.add_argument('-D', '--delete', action='store_true')
     p.add_argument('-A', '--deleteall', action='store_true')
     return p.parse_args()
@@ -54,10 +50,12 @@ def post(host, metadata, zippath):
     address = _makeaddr(host)
     L.info('POSTing to %s\n  metadata: %s\n  zippath: %s', address, metadata, zippath)
     filename = os.path.basename(zippath)
-    got = requests.post(
-        address,
-        data=metadata,
-        files={"archive": (filename, open(zippath, 'rb'))})
+    with open(zippath,'rb') as ziph:
+        files = {"archive": (filename, ziph)}
+        got = requests.post(
+            address,
+            data=metadata,
+            files=files)
     return got
 
 

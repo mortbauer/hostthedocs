@@ -1,96 +1,114 @@
 import os
-from urllib.parse import unquote, quote
+import logging
+from urllib.parse import quote
+from collections import OrderedDict
 
-from starlette.applications import Starlette
 from starlette.responses import JSONResponse, PlainTextResponse, RedirectResponse
-from starlette.routing import Route, Mount
 from starlette.templating import Jinja2Templates
-from starlette.staticfiles import StaticFiles
+
+from fastapi import FastAPI, Depends, UploadFile,status, HTTPException, File, Form, Request
+from fastapi.security import OAuth2PasswordBearer
+from fastapi.staticfiles import StaticFiles
+
+from pydantic import BaseModel
+
 
 from . import getconfig
 from .filekeeper import delete_files, insert_link_to_latest, parse_docfiles, unpack_project
+
+logger = logging.getLogger(__name__)
 
 dirname = os.path.dirname(__file__)
 templates = Jinja2Templates(directory=os.path.join(dirname,'templates'))
 static_dir = os.path.join(dirname,'static')
 
-async def hmfd(request):
-    if getconfig.auth_token is not None:
-        token = request.headers.get('Authorization')
-        if getconfig.auth_token != token:
-            return PlainTextResponse('',status_code=401)
+app = FastAPI()
 
-    if getconfig.readonly:
-        return PlainTextResponse('',status_code=403)
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
-    if request.method == 'POST':
-        form = await request.form()
-        uploaded_file = form.get('filedata')
-        if uploaded_file is None:
-            return PlainTextResponse('Request is missing a zip/tar file.',status_code=400)
-        metadata = dict(form)
-        unpack_project(
-            uploaded_file,
-            metadata,
-            getconfig.docfiles_dir
-        )
-        await uploaded_file.close()
-    elif request.method == 'DELETE':
-        if getconfig.disable_delete:
-            return PlainTextResponse('',status_code=403)
-        project_name = unquote(request.query_params.get('name',''))
-        if not project_name:
-            return PlainTextResponse('Include at least the name of the project',status_code=400)
-        version = request.query_params.get('version')
-        entire_project = request.query_params.get('entire_project') in ('True','true')
-        if version is None and not entire_project:
-            return PlainTextResponse('Include a version or specify entire_project',status_code=400)
-        delete_files(project_name,version,getconfig.docfiles_dir,entire_project)
-    else:
-        return PlainTextResponse('',status_code=405)
-
-    return JSONResponse({'success': True})
+security = OAuth2PasswordBearer(tokenUrl="/token")
 
 
-def home(request):
-    projects = parse_docfiles(
+def update_projects():
+    app.projects = parse_docfiles(
         getconfig.docfiles_dir,
-        getconfig.docfiles_link_root
+        getconfig.docfiles_link_root,
+        getconfig.public_path,
     )
     templ = '{}%(project)s/latest'.format(getconfig.public_path)
-    insert_link_to_latest(projects, templ)
+    insert_link_to_latest(app.projects, templ)
+
+update_projects()
+
+
+class Meta(BaseModel):
+    name: str
+    version: str
+    description: str = '' 
+
+
+def check_access(token:str = Depends(security)):
+    if getconfig.auth_token is not None and getconfig.auth_token != token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect token",
+        )
+    if getconfig.readonly:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+        )
+
+def get_meta(name:str=Form(...),description:str=Form(...),version:str=Form(...)):
+    return Meta(name=name,description=description,version=version)
+
+@app.post('/hmfd',dependencies=[Depends(check_access)])
+async def hmfd(metadata=Depends(get_meta),archive:UploadFile=File(...)):
+    unpack_project(
+        archive,
+        metadata,
+        getconfig.docfiles_dir
+    )
+    await archive.close()
+    update_projects()
+    return {'success': True}
+
+@app.delete('/hmfd',dependencies=[Depends(check_access)])
+async def delete_doc(project:str,version:str=None,entire:bool=None):
+    if getconfig.disable_delete:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+        )
+    if version is None and not entire:
+        raise HTTPException(
+            detail='Include a version or specify entire_project',
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+    delete_files(project,version,getconfig.docfiles_dir,entire_project=entire)
+    update_projects()
+    return {'success': True}
+
+
+@app.get('/')
+def home(request:Request):
     params = dict(
-        projects=projects,
+        projects=app.projects,
         request=request,
         **getconfig.renderables
     )
     return templates.TemplateResponse('index.html', params)
 
-
-def latest(request):
-    project = request.path_params['project']
-    path = request.path_params.get('path')
-    parsed_docfiles = parse_docfiles(
-        getconfig.docfiles_dir, 
-        getconfig.docfiles_link_root
-    )
-    proj_for_name = dict((p['name'], p) for p in parsed_docfiles)
+@app.get('/{project}/latest')
+@app.get('/{project}/latest/{path}')
+def latest(project:str,path:str = None):
+    proj_for_name = dict((p['name'], p) for p in app.projects)
     if project not in proj_for_name:
         msg = 'Project %s not found' % project
         return PlainTextResponse(msg,status_code=404)
-    latestindex = proj_for_name[project]['versions'][-1]['link']
+    latestindex = proj_for_name[project]['versions'][-2]['link']
     if path is not None:
         latestlink = '%s/%s' % (os.path.dirname(latestindex), path)
     else:
         latestlink = latestindex
     fulllink = '/' + latestlink
     return RedirectResponse(url=quote(fulllink))
-
-
-app = Starlette(debug=getconfig.debug, routes=[
-    Route('/{project}/latest/{path}',latest),
-    Route('/{project}/latest',latest),
-    Route('/hmfd',hmfd,methods=['POST', 'DELETE']),
-    Route('/', home),
-    Mount('/static', app=StaticFiles(directory=static_dir), name="static"),
-])
