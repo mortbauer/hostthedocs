@@ -19,9 +19,15 @@ services:
       traefik.http.routers.htd.middlewares: htd
       traefik.http.routers.htd_secure.rule: PathPrefix(`/htd`)
       traefik.http.routers.htd_secure.tls: true
-      traefik.http.routers.htd_secure.middlewares: htd
-      traefik.http.middlewares.htd.stripprefix.prefixes: /htd
+      traefik.http.routers.htd_secure.middlewares: strip-prefix
       traefik.http.services.htd.loadbalancer.server.port: 5000
+      # strip-any prefix and ensure trailing slash for proper relative links
+      # https://community.containo.us/t/middleware-to-add-the-if-needed/1895/13 
+      traefik.http.middlewares.strip-prefix.chain.middlewares: strip-prefix-1,strip-prefix-2
+      traefik.http.middlewares.strip-prefix-1.redirectregex.regex: ^(https?://[^/]+/[a-z0-9_]+)$$
+      traefik.http.middlewares.strip-prefix-1.redirectregex.replacement: $${1}/
+      traefik.http.middlewares.strip-prefix-1.redirectregex.permanent: true
+      traefik.http.middlewares.strip-prefix-2.stripprefixregex.regex: /[a-z0-9_]+
     networks:
       - proxy
 
